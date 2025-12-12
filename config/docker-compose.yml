@@ -1,0 +1,139 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: replit-postgres
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-microservices}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - microservices
+
+  # API Gateway
+  api-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: api-gateway
+    container_name: api-gateway
+    ports:
+      - "5000:5000"
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@postgres:5432/${DB_NAME:-microservices}
+      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-7d}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - microservices
+    restart: unless-stopped
+
+  # Auth Service
+  auth-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: auth-service
+    container_name: auth-service
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@postgres:5432/${DB_NAME:-microservices}
+      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-7d}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - microservices
+    restart: unless-stopped
+
+  # Infrastructure Service
+  infrastructure-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: infrastructure-service
+    container_name: infrastructure-service
+    ports:
+      - "3002:3002"
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@postgres:5432/${DB_NAME:-microservices}
+      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-7d}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - microservices
+    restart: unless-stopped
+
+  # Agents Service
+  agents-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: agents-service
+    container_name: agents-service
+    ports:
+      - "3003:3003"
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@postgres:5432/${DB_NAME:-microservices}
+      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-7d}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - microservices
+    restart: unless-stopped
+
+  # Monitor Service
+  monitor-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: monitor-service
+    container_name: monitor-service
+    ports:
+      - "3004:3004"
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@postgres:5432/${DB_NAME:-microservices}
+      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-7d}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - microservices
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+networks:
+  microservices:
+    driver: bridge

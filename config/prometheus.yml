@@ -1,0 +1,72 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'microservices-monitor'
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'jaeger'
+    static_configs:
+      - targets: ['jaeger:16686']
+
+  - job_name: 'kafka'
+    static_configs:
+      - targets: ['kafka:29092']
+
+  - job_name: 'elasticsearch'
+    static_configs:
+      - targets: ['elasticsearch:9200']
+
+  - job_name: 'rabbitmq'
+    static_configs:
+      - targets: ['rabbitmq:15672']
+    metrics_path: '/api/metrics'
+    basic_auth:
+      username: 'rabbitmq_user'
+      password: 'rabbitmq_password_secure'
+
+  - job_name: 'api-gateway'
+    static_configs:
+      - targets: ['api-gateway:5000']
+    metrics_path: '/metrics'
+
+  - job_name: 'auth-service'
+    static_configs:
+      - targets: ['auth-service:3001']
+    metrics_path: '/metrics'
+
+  - job_name: 'infrastructure-service'
+    static_configs:
+      - targets: ['infrastructure-service:3002']
+    metrics_path: '/metrics'
+
+  - job_name: 'agents-service'
+    static_configs:
+      - targets: ['agents-service:3003']
+    metrics_path: '/metrics'
+
+  - job_name: 'monitor-service'
+    static_configs:
+      - targets: ['monitor-service:3004']
+    metrics_path: '/metrics'
+
+  - job_name: 'kafka-exporter'
+    static_configs:
+      - targets: ['localhost:9308']
+    scrape_interval: 30s
+
+  - job_name: 'mongodb-exporter'
+    static_configs:
+      - targets: ['localhost:9216']
+
+  - job_name: 'redis-exporter'
+    static_configs:
+      - targets: ['localhost:9121']
+
+# Reference alert rules stored in separate file(s)
+rule_files:
+  - "/etc/prometheus/alert_rules.yml"

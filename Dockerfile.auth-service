@@ -1,0 +1,33 @@
+FROM node:20-alpine
+
+# Install OpenSSL and other dependencies for Prisma
+RUN apk add --no-cache libc6-compat openssl bash
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Copy Prisma schema BEFORE npm install (needed for postinstall script)
+COPY prisma ./prisma
+
+# Install dependencies (this will also run prisma generate if defined in postinstall)
+RUN npm install
+
+# Copy source code (including libs)
+COPY apps/auth-service ./apps/auth-service
+COPY libs ./libs
+COPY tsconfig.json ./
+COPY nest-cli.json ./
+COPY webpack.config.js ./
+
+# Build the auth-service
+RUN npm run build:auth-service
+
+# Expose port
+EXPOSE 3001
+
+# Run Prisma migrations and generate client on container start, then start app
+CMD npx prisma migrate deploy && \
+    npx prisma generate && \
+    npm run start:dev:auth-service

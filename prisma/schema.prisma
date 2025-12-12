@@ -1,0 +1,105 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL")
+}
+
+model ResourceGroup {
+  id              String           @id @default(uuid())
+  name            String
+  description     String?
+  type            String
+  provider        String
+  address         String?
+  credentials     Json?
+  virtualMachines VirtualMachine[]
+  virtualNetworks VirtualNetwork[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+
+model VirtualMachine {
+  id              String        @id @default(uuid())
+  name            String
+  resourceGroupId String
+  resourceGroup   ResourceGroup @relation(fields: [resourceGroupId], references: [id])
+  os              String
+  size            String
+  status          String
+  ip              String?
+  connectionType  String?
+  credentials     Json?
+  publicKey       String?
+  agents          Agent[]
+  metrics         Metric[]
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+model VirtualNetwork {
+  id              String        @id @default(uuid())
+  name            String
+  resourceGroupId String
+  resourceGroup   ResourceGroup @relation(fields: [resourceGroupId], references: [id])
+  cidr            String
+  subnets         Json?
+  status          String
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+model Agent {
+  id               String         @id @default(uuid())
+  virtualMachineId String
+  virtualMachine   VirtualMachine @relation(fields: [virtualMachineId], references: [id])
+  status           String
+  version          String
+  lastHeartbeat    DateTime?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  tasks            tasks[] 
+}
+
+model Metric {
+  id               String         @id @default(uuid())
+  virtualMachineId String
+  virtualMachine   VirtualMachine @relation(fields: [virtualMachineId], references: [id])
+  cpu              Float
+  memory           Float
+  disk             Float
+  network          Float
+  timestamp        DateTime       @default(now())
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Permission {
+  id        String   @id @default(uuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model tasks {
+  id        String   @id @default(uuid())
+  agentId   String
+  agent     Agent    @relation(fields: [agentId], references: [id])
+  createdAt DateTime @default(now())
+  status    String
+}

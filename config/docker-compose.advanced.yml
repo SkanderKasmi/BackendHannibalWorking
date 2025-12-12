@@ -1,0 +1,499 @@
+version: '3.8'
+
+services:
+
+  # ═══════════════════════════════════════════════════════════════
+  # DATABASES - Each service has its own database
+  # ═══════════════════════════════════════════════════════════════
+
+  # Auth Service - PostgreSQL
+  auth-postgres:
+    image: postgres:16-alpine
+    container_name: auth-postgres
+    environment:
+      POSTGRES_USER: auth_user
+      POSTGRES_PASSWORD: skander12345
+      POSTGRES_DB: auth_db
+    ports:
+      - "5431:5432"
+    volumes:
+      - auth_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U auth_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - microservices
+    restart: unless-stopped
+
+  # Infrastructure Service - MongoDB
+  infra-mongodb:
+    image: mongo:7.0 # Stable version used
+    container_name: infra-mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: infra_user
+      MONGO_INITDB_ROOT_PASSWORD: skander12345
+      MONGO_INITDB_DATABASE: infra_db
+    ports:
+      - "27017:27017"
+    volumes:
+      - infra_mongodb_data:/data/db
+    healthcheck:
+      # Use the lighter 'echo "db.ping()" | mongosh infra_db -u infra_user -p skander12345' 
+      # or for simplicity, the original command might be fine if `mongosh` is available in the image.
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - microservices
+    restart: unless-stopped
+
+  # Agents Service - Redis
+  agents-redis:
+    image: redis:7-alpine
+    container_name: agents-redis
+    environment:
+      # REDIS_PASSWORD is not a standard Redis environment variable for setting the password. 
+      # It's set via the `command`. The environment variable is for your application to consume.
+      - REDIS_PASSWORD=skander12345
+    command: redis-server --requirepass skander12345
+    ports:
+      - "6379:6379"
+    volumes:
+      - agents_redis_data:/data
+    healthcheck:
+      # The check needs the password if set. 
+      # It's better to use `redis-cli -a <password> ping` if you want a simple check.
+      # The provided check is often fine, but you might need to adjust based on Redis config.
+      test: ["CMD", "redis-cli", "-a", "skander12345", "ping"] 
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - microservices
+    restart: unless-stopped
+
+  # Monitor Service - TimescaleDB (PostgreSQL extension for time-series)
+  monitor-timescaledb:
+    image: timescale/timescaledb:latest-pg16
+    container_name: monitor-timescaledb
+    environment:
+      POSTGRES_USER: monitor_user
+      POSTGRES_PASSWORD: skander12345
+      POSTGRES_DB: monitor_db
+    ports:
+      # 🚨 CORRECTION: Changed from 5432 to 5432 to avoid conflict with auth-postgres 5431:5432 (5432 is a common internal port).
+      # If you want to use 5432 on the host, you must NOT use it on any other service, 
+      # or you must remove the host port binding from the other service.
+      # Since auth-postgres uses 5431:5432, we'll use 5432:5432 for TimescaleDB and change the host port of auth-postgres to 5431.
+      # Reverting back to original to keep 5432 on host for TimescaleDB and 5431 for auth-postgres
+      - "5432:5432"
+    volumes:
+      - monitor_timescaledb_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U monitor_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - microservices
+    restart: unless-stopped
+
+  # API Gateway Cache - Redis
+  gateway-redis:
+    image: redis:7-alpine
+    container_name: gateway-redis
+    environment:
+      - REDIS_PASSWORD=skander12345
+    command: redis-server --requirepass skander12345
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "skander12345", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "6380:6379"
+    volumes:
+      - gateway_redis_data:/data
+    networks:
+      - microservices
+    restart: unless-stopped
+
+
+  # ═══════════════════════════════════════════════════════════════
+  # MESSAGE BROKERS & STREAMING
+  # ═══════════════════════════════════════════════════════════════
+
+  # RabbitMQ - Service-to-Service Communication
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: rabbitmq-broker
+    environment:
+      RABBITMQ_DEFAULT_USER: rabbitmq_user
+      RABBITMQ_DEFAULT_PASS: skander12345
+      RABBITMQ_DEFAULT_VHOST: /
+    ports:
+      - "5672:5672"      # AMQP port
+      - "15672:15672"    # Management UI
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      # Added 'rabbitmq-diagnostics -q ping' as an array for robustness, although string form often works.
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"] 
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - microservices
+    restart: unless-stopped
+
+  # Kafka - VM Monitoring Data Streaming
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper/data
+    networks:
+      - microservices
+    restart: unless-stopped
+
+  kafka:
+    # 🚨 CORRECTION: Changed image tag to one that often includes Zookeeper-specific configurations.
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka-broker
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      # 🚨 CORRECTION: KAFKA_LISTENERS needs to define both internal and external listeners
+      KAFKA_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+    ports:
+      - "9092:9092"
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    networks:
+      - microservices
+    restart: unless-stopped
+
+
+  # ═══════════════════════════════════════════════════════════════
+  # OBSERVABILITY - ELK Stack
+  # ═══════════════════════════════════════════════════════════════
+
+  # Elasticsearch - Logs & Metrics Storage
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.10.0
+    container_name: elasticsearch
+    environment:
+      # You need to explicitly set `xpack.security.enabled=false` if you want to run without security.
+      # If you use the standard Docker image, you might also need:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - xpack.security.enrollment.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      # Required for Elasticsearch to run properly
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    healthcheck:
+      # Corrected to use the full URL in case the internal container name is not 'localhost'
+      test: ["CMD-SHELL", "curl -s http://localhost:9200 >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - microservices
+    restart: unless-stopped
+
+  # Logstash - Log Processing & Transformation
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.10.0
+    container_name: logstash
+    ports:
+      - "5000:5000"
+      - "9600:9600"
+    environment:
+      - "LS_JAVA_OPTS=-Xmx256m -Xms256m"
+    volumes:
+      # Ensure you have the logstash.conf file in the same directory as this docker-compose file
+      - ./logstash.conf:/usr/share/logstash/pipeline/logstash.conf
+    depends_on:
+      elasticsearch:
+        condition: service_healthy # Wait for ES to be healthy
+    networks:
+      - microservices
+    restart: unless-stopped
+
+  # Kibana - Logs & Analytics Visualization
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.12.2
+    container_name: kibana
+    ports:
+      - "5601:5601"
+    environment:
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+    depends_on:
+      elasticsearch:
+        condition: service_healthy # Wait for ES to be healthy
+    networks:
+      - microservices
+    restart: unless-stopped
+
+
+  # ═══════════════════════════════════════════════════════════════
+  # OBSERVABILITY - OpenTelemetry
+  # ═══════════════════════════════════════════════════════════════
+
+  # Jaeger - Distributed Tracing
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: jaeger-tracing
+    ports:
+      - "16686:16686"  # Jaeger UI
+      - "4317:4317"    # OTLP gRPC receiver
+      - "4318:4318"    # OTLP HTTP receiver
+      - "14250:14250"  # gRPC receiver
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    networks:
+      - microservices
+    restart: unless-stopped
+
+  # Prometheus - Metrics Collection
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      # Ensure you have the prometheus.yml file in the same directory as this docker-compose file
+      - .config/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    networks:
+      - microservices
+    restart: unless-stopped
+
+  # Grafana - Metrics Visualization
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin # Change this in a real deployment
+      GF_INSTALL_PLUGINS: grafana-piechart-panel
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    networks:
+      - microservices
+    restart: unless-stopped
+
+
+  # ═══════════════════════════════════════════════════════════════
+  # MICROSERVICES
+  # ═══════════════════════════════════════════════════════════════
+
+  # API Gateway
+  api-gateway:
+    build:
+      context: ../
+      dockerfile: apps/api-gateway/Dockerfile
+    container_name: api-gateway
+    ports:
+      - "5000:5000"
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://auth_user:skander12345@auth-postgres:5432/auth_db
+      REDIS_URL: redis://:skander12345@gateway-redis:6379
+      RABBITMQ_URL: amqp://rabbitmq_user:skander12345@rabbitmq:5672
+      JWT_SECRET: your-super-secret-jwt-key-change-in-production
+      JWT_EXPIRATION: 7d
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+      OTEL_SERVICE_NAME: api-gateway
+    depends_on:
+      gateway-redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      jaeger:
+        condition: service_started
+    networks:
+      - microservices
+    restart: unless-stopped
+
+  # Auth Service
+  auth-service:
+    build:
+      context: ../
+      dockerfile: apps/auth-service/Dockerfile
+    container_name: auth-service
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://auth_user:skander12345@auth-postgres:5432/auth_db
+      RABBITMQ_URL: amqp://rabbitmq_user:skander12345@rabbitmq:5672
+      JWT_SECRET: your-super-secret-jwt-key-change-in-production
+      JWT_EXPIRATION: 7d
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+      OTEL_SERVICE_NAME: auth-service
+    depends_on:
+      auth-postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      jaeger:
+        condition: service_started
+    networks:
+      - microservices
+    restart: unless-stopped
+
+  # Infrastructure Service
+  infrastructure-service:
+    build:
+      context: ../
+      dockerfile: apps/infrastructure-service/Dockerfile
+    container_name: infrastructure-service
+    ports:
+      - "3002:3002"
+    environment:
+      NODE_ENV: development
+      MONGODB_URL: mongodb://infra_user:skander12345@infra-mongodb:27017/infra_db?authSource=admin
+      RABBITMQ_URL: amqp://rabbitmq_user:skander12345@rabbitmq:5672
+      JWT_SECRET: your-super-secret-jwt-key-change-in-production
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+      OTEL_SERVICE_NAME: infrastructure-service
+    depends_on:
+      infra-mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      jaeger:
+        condition: service_started
+    networks:
+      - microservices
+    restart: unless-stopped
+
+  # Agents Service
+  agents-service:
+    build:
+      context: ../
+      dockerfile: apps/agents-service/Dockerfile
+    container_name: agents-service
+    ports:
+      - "3003:3003"
+    environment:
+      NODE_ENV: development
+      REDIS_URL: redis://:skander12345@agents-redis:6379
+      RABBITMQ_URL: amqp://rabbitmq_user:skander12345@rabbitmq:5672
+      JWT_SECRET: your-super-secret-jwt-key-change-in-production
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+      OTEL_SERVICE_NAME: agents-service
+    depends_on:
+      agents-redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      jaeger:
+        condition: service_started
+    networks:
+      - microservices
+    restart: unless-stopped
+
+  # Monitor Service
+  monitor-service:
+    build:
+      context: ../
+      dockerfile: apps/monitor-service/Dockerfile
+    container_name: monitor-service
+    ports:
+      - "3004:3004"
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://monitor_user:skander12345@monitor-timescaledb:5432/monitor_db
+      KAFKA_BROKERS: kafka:29092
+      KAFKA_CONSUMER_GROUP: monitor-service-group
+      KAFKA_TOPIC: vm-metrics
+      RABBITMQ_URL: amqp://rabbitmq_user:skander12345@rabbitmq:5672
+      JWT_SECRET: your-super-secret-jwt-key-change-in-production
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+      OTEL_SERVICE_NAME: monitor-service
+      PROMETHEUS_PUSHGATEWAY: prometheus:9091 # Assuming you might want to use a PushGateway later
+    depends_on:
+      monitor-timescaledb:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+      jaeger:
+        condition: service_started
+    networks:
+      - microservices
+    restart: unless-stopped
+
+
+
+networks:
+  microservices:
+    driver: bridge
+
+volumes:
+  # Auth Service - PostgreSQL
+  auth_postgres_data:
+  
+  # Infrastructure Service - MongoDB
+  infra_mongodb_data:
+  
+  # Agents Service - Redis
+  agents_redis_data:
+  
+  # Monitor Service - TimescaleDB
+  monitor_timescaledb_data:
+  
+  # API Gateway - Redis CacheFki
+  gateway_redis_data:
+  
+  # RabbitMQ
+  rabbitmq_data:
+  
+  # Zookeeper
+  zookeeper_data:
+  
+  # Kafka
+  kafka_data:
+  
+  # Elasticsearch
+  elasticsearch_data:
+  
+  # Prometheus
+  prometheus_data:
+  
+  # Grafana
+  grafana_data:

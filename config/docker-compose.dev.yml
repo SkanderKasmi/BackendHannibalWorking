@@ -1,0 +1,144 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: replit-postgres-dev
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: microservices
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - microservices_dev
+
+  # API Gateway (Development mode with hot reload)
+  api-gateway:
+    image: node:20-alpine
+    container_name: api-gateway-dev
+    working_dir: /app
+    ports:
+      - "5000:5000"
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/microservices
+      JWT_SECRET: your-super-secret-jwt-key-change-in-production
+      JWT_EXPIRATION: 7d
+    volumes:
+      - ../:/app
+      - /app/node_modules
+    command: sh -c "npm install && npm run start:dev:api-gateway"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - microservices_dev
+    restart: unless-stopped
+
+  # Auth Service (Development mode with hot reload)
+  auth-service:
+    image: node:20-alpine
+    container_name: auth-service-dev
+    working_dir: /app
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/microservices
+      JWT_SECRET: your-super-secret-jwt-key-change-in-production
+      JWT_EXPIRATION: 7d
+    volumes:
+      - ../:/app
+      - /app/node_modules
+    command: sh -c "npm install && npm run start:dev:auth-service"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - microservices_dev
+    restart: unless-stopped
+
+  # Infrastructure Service (Development mode with hot reload)
+  infrastructure-service:
+    image: node:20-alpine
+    container_name: infrastructure-service-dev
+    working_dir: /app
+    ports:
+      - "3002:3002"
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/microservices
+      JWT_SECRET: your-super-secret-jwt-key-change-in-production
+      JWT_EXPIRATION: 7d
+    volumes:
+      - ../:/app
+      - /app/node_modules
+    command: sh -c "npm install && npm run start:dev:infrastructure-service"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - microservices_dev
+    restart: unless-stopped
+
+  # Agents Service (Development mode with hot reload)
+  agents-service:
+    image: node:20-alpine
+    container_name: agents-service-dev
+    working_dir: /app
+    ports:
+      - "3003:3003"
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/microservices
+      JWT_SECRET: your-super-secret-jwt-key-change-in-production
+      JWT_EXPIRATION: 7d
+    volumes:
+      - ../:/app
+      - /app/node_modules
+    command: sh -c "npm install && npm run start:dev:agents-service"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - microservices_dev
+    restart: unless-stopped
+
+  # Monitor Service (Development mode with hot reload)
+  monitor-service:
+    image: node:20-alpine
+    container_name: monitor-service-dev
+    working_dir: /app
+    ports:
+      - "3004:3004"
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/microservices
+      JWT_SECRET: your-super-secret-jwt-key-change-in-production
+      JWT_EXPIRATION: 7d
+    volumes:
+      - ../:/app
+      - /app/node_modules
+    command: sh -c "npm install && npm run start:dev:monitor-service"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - microservices_dev
+    restart: unless-stopped
+
+volumes:
+  postgres_data_dev:
+
+networks:
+  microservices_dev:
+    driver: bridge
