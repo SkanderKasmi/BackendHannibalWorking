@@ -2,10 +2,17 @@ import { Injectable } from '@nestjs/common';
 import { DeployAgentDto, CreateTaskDto, TaskStatus } from '@app/common/dto';
 import { ServiceResponse } from '@app/common/interfaces';
 import { PrismaService } from './prisma.service';
+import { RabbitMQService, RABBITMQ_CONFIG } from '@libs/common/messaging/rabbitmq.service';
+import { KafkaService, KAFKA_CONFIG } from '@libs/common/messaging/kafka.service';
+import { RABBITMQ_ROUTING_KEYS } from '@app/common/constants';
 
 @Injectable()
 export class AgentsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly rabbitmq: RabbitMQService,
+    private readonly kafka: KafkaService,
+  ) {}
 
   async deployAgent(dto: DeployAgentDto): Promise<ServiceResponse<any>> {
     try {
@@ -80,6 +87,39 @@ export class AgentsService {
     } catch (error) {
       return { success: false, error: error.message };
     }
+  }
+
+  async deployScriptsForVM(vmId: string, files: string[]): Promise<void> {
+    const vm = await this.prisma.virtualMachine.findUnique({ where: { id: vmId } });
+    if (!vm) return;
+    let agent = await this.prisma.agent.findFirst({ where: { virtualMachineId: vmId } });
+    if (!agent) {
+      agent = await this.prisma.agent.create({
+        data: { virtualMachineId: vmId, status: 'DEPLOYED', version: '1.0.0' },
+      });
+    } else {
+      await this.prisma.agent.update({ where: { id: agent.id }, data: { status: 'DEPLOYED' } });
+    }
+    await this.prisma.virtualMachine.update({ where: { id: vmId }, data: { status: 'RUNNING' } });
+    await this.rabbitmq.publish(
+      RABBITMQ_CONFIG.exchanges.SERVICES,
+      RABBITMQ_ROUTING_KEYS.INFRASTRUCTURE_VM_STATUS,
+      { vmId, status: 'CONNECTED' },
+    );
+    await this.kafka.publishMetric(KAFKA_CONFIG.topics.VM_METRICS, vmId, {
+      vm_id: vmId,
+      timestamp: new Date().toISOString(),
+      cpu: { usage_percent: 0 },
+      memory: { total: 0, used: 0, free: 0 },
+      disk: [],
+      network: [],
+      processes: { total: 0, top_processes: [] },
+      load: { '1min': 0, '5min': 0, '15min': 0 },
+      uptime_seconds: 0,
+      hostname: vm.name,
+      os: vm.os,
+      kernel: '',
+    });
   }
 
   async createTask(dto: CreateTaskDto): Promise<ServiceResponse<any>> {

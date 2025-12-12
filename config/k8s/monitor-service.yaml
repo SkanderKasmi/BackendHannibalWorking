@@ -1,0 +1,49 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: monitor-service
+  namespace: devsecops
+spec:
+  selector:
+    app: monitor-service
+  ports:
+    - name: http
+      port: 3004
+      targetPort: 3004
+    - name: metrics
+      port: 9104
+      targetPort: 9104
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: monitor-service
+  namespace: devsecops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: monitor-service
+  template:
+    metadata:
+      labels:
+        app: monitor-service
+    spec:
+      containers:
+        - name: monitor-service
+          image: devsecops/monitor-service:latest
+          ports:
+            - containerPort: 3004
+            - containerPort: 9104
+          env:
+            - name: OTEL_SERVICE_NAME
+              value: monitor-service
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: http://jaeger.devsecops.svc.cluster.local:4318
+            - name: METRICS_PORT
+              value: "9104"
+          envFrom:
+            - configMapRef:
+                name: devsecops-config
+            - secretRef:
+                name: service-secrets

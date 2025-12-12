@@ -12,10 +12,12 @@ import {
 } from '@app/common/dto';
 import { ServiceResponse } from '@app/common/interfaces';
 import { PrismaService } from './prisma.service';
+import { RabbitMQService, RABBITMQ_CONFIG } from '@libs/common/messaging/rabbitmq.service';
+import { AGENT_SCRIPT_FILES, RABBITMQ_ROUTING_KEYS } from '@app/common/constants';
 
 @Injectable()
 export class InfrastructureService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly rabbitmq: RabbitMQService) {}
 
   async createResourceGroup(dto: CreateResourceGroupDto): Promise<ServiceResponse<any>> {
     try {
@@ -119,6 +121,15 @@ export class InfrastructureService {
           publicKey: dto.publicKey,
         },
       });
+
+      await this.rabbitmq.publish(
+        RABBITMQ_CONFIG.exchanges.SERVICES,
+        RABBITMQ_ROUTING_KEYS.AGENTS_DEPLOY_SCRIPTS,
+        {
+          vmId: vm.id,
+          files: [AGENT_SCRIPT_FILES.PRODUCER, AGENT_SCRIPT_FILES.CONNECTIVITY, AGENT_SCRIPT_FILES.AGENTS],
+        },
+      );
 
       return { success: true, data: vm };
     } catch (error) {

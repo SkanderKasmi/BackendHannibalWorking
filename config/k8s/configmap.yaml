@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: devsecops-config
+  namespace: devsecops
+data:
+  NODE_ENV: docker
+  JWT_EXPIRATION: "3600"
+  KAFKA_BROKERS: kafka:9092
+  REDIS_HOST: redis
+  REDIS_PORT: "6379"

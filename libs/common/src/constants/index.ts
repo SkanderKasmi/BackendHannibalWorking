@@ -47,6 +47,7 @@ export const MESSAGE_PATTERNS = {
     GET_VIRTUAL_NETWORKS: 'infra.get_virtual_networks',
     UPDATE_VIRTUAL_NETWORK: 'infra.update_virtual_network',
     DELETE_VIRTUAL_NETWORK: 'infra.delete_virtual_network',
+    VM_CONNECTIVITY_UPDATE: 'infra.vm_connectivity_update',
   },
   AGENTS: {
     DEPLOY_AGENT: 'agents.deploy',
@@ -62,4 +63,15 @@ export const MESSAGE_PATTERNS = {
     GET_RESOURCE_GROUP_STATS: 'monitor.get_rg_stats',
     RECORD_METRIC: 'monitor.record_metric',
   },
+};
+
+export const AGENT_SCRIPT_FILES = {
+  PRODUCER: 'producer.sh',
+  CONNECTIVITY: 'connectivity.sh',
+  AGENTS: 'agents.sh',
+};
+
+export const RABBITMQ_ROUTING_KEYS = {
+  AGENTS_DEPLOY_SCRIPTS: 'agents.deploy_scripts',
+  INFRASTRUCTURE_VM_STATUS: 'infrastructure.vm.status',
 };

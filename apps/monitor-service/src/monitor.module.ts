@@ -6,8 +6,10 @@ import { KafkaService } from '@libs/common/messaging/kafka.service';
 import { PrismaService } from './prisma.service';
 import { AdvancedMonitorService } from './advanced-monitor.service';
 import { AdvancedMonitorController } from './advanced-monitor.controller';
+import { MetricsModule } from '@libs/common/metrics/metrics.module';
 
 @Module({
+  imports: [MetricsModule],
   controllers: [MonitorController, AdvancedMonitorController],
   providers: [
     MonitorService,

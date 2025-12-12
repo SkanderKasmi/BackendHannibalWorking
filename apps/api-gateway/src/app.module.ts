@@ -20,6 +20,7 @@ import { MonitorController } from './controllers/monitor.controller';
 import { HealthController } from './controllers/health.controller';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
+import { MetricsModule } from '@libs/common/metrics/metrics.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { RolesGuard } from './guards/roles.guard';
       limit: 100,
     }]),
     TerminusModule,
+    MetricsModule,
     ClientsModule.register([
       {
         name: AUTH_SERVICE,

@@ -32,5 +32,10 @@ async function bootstrap() {
   
   await app.listen();
   console.log(`Auth Service is running on port ${AUTH_SERVICE_PORT}`);
+  
+  const metricsPort = parseInt(process.env.METRICS_PORT || '9101', 10);
+  const httpApp = await NestFactory.create(AuthModule);
+  await httpApp.listen(metricsPort, '0.0.0.0');
+  console.log(`Auth Service metrics available on port ${metricsPort}/metrics`);
 }
 bootstrap();

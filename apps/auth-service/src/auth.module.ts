@@ -4,9 +4,11 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { RabbitMQService } from '@libs/common/messaging/rabbitmq.service';
 import { PrismaService } from './prisma.service';
+import { MetricsModule } from '@libs/common/metrics/metrics.module';
 
 @Module({
   imports: [
+    MetricsModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'super-secret-jwt-key-change-in-production',
       signOptions: { expiresIn: '24h' },

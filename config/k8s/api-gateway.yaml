@@ -1,0 +1,44 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-gateway
+  namespace: devsecops
+spec:
+  type: LoadBalancer
+  selector:
+    app: api-gateway
+  ports:
+    - name: http
+      port: 5000
+      targetPort: 5000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-gateway
+  namespace: devsecops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api-gateway
+  template:
+    metadata:
+      labels:
+        app: api-gateway
+    spec:
+      containers:
+        - name: api-gateway
+          image: devsecops/api-gateway:latest
+          ports:
+            - containerPort: 5000
+          env:
+            - name: OTEL_SERVICE_NAME
+              value: api-gateway
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: http://jaeger.devsecops.svc.cluster.local:4318
+          envFrom:
+            - configMapRef:
+                name: devsecops-config
+            - secretRef:
+                name: service-secrets

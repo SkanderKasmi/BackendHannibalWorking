@@ -46,5 +46,10 @@ async function bootstrap() {
   
   await app.listen();
   console.log(`Monitor Service is running on port ${MONITOR_SERVICE_PORT}`);
+  
+  const metricsPort = parseInt(process.env.METRICS_PORT || '9104', 10);
+  const httpApp = await NestFactory.create(MonitorModule);
+  await httpApp.listen(metricsPort, '0.0.0.0');
+  console.log(`Monitor Service metrics available on port ${metricsPort}/metrics`);
 }
 bootstrap();

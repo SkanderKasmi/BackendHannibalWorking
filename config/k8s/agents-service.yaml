@@ -1,0 +1,49 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: agents-service
+  namespace: devsecops
+spec:
+  selector:
+    app: agents-service
+  ports:
+    - name: http
+      port: 3003
+      targetPort: 3003
+    - name: metrics
+      port: 9103
+      targetPort: 9103
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agents-service
+  namespace: devsecops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: agents-service
+  template:
+    metadata:
+      labels:
+        app: agents-service
+    spec:
+      containers:
+        - name: agents-service
+          image: devsecops/agents-service:latest
+          ports:
+            - containerPort: 3003
+            - containerPort: 9103
+          env:
+            - name: OTEL_SERVICE_NAME
+              value: agents-service
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: http://jaeger.devsecops.svc.cluster.local:4318
+            - name: METRICS_PORT
+              value: "9103"
+          envFrom:
+            - configMapRef:
+                name: devsecops-config
+            - secretRef:
+                name: service-secrets
