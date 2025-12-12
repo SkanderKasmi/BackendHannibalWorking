@@ -31,7 +31,7 @@ spec:
     spec:
       containers:
         - name: auth-service
-          image: devsecops/auth-service:latest
+          image: pikafoc/skanderdevsopp-auth-service
           ports:
             - containerPort: 3001
             - containerPort: 9101

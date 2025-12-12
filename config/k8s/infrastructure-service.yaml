@@ -31,7 +31,7 @@ spec:
     spec:
       containers:
         - name: infrastructure-service
-          image: devsecops/infrastructure-service:latest
+          image: pikafoc/skanderdevsopp-infrastructure-service
           ports:
             - containerPort: 3002
             - containerPort: 9102

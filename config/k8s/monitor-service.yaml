@@ -31,7 +31,7 @@ spec:
     spec:
       containers:
         - name: monitor-service
-          image: devsecops/monitor-service:latest
+          image: pikafoc/skanderdevsopp-monitor-service
           ports:
             - containerPort: 3004
             - containerPort: 9104

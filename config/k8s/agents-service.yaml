@@ -31,7 +31,7 @@ spec:
     spec:
       containers:
         - name: agents-service
-          image: devsecops/agents-service:latest
+          image: pikafoc/skanderdevsopp-agents-service
           ports:
             - containerPort: 3003
             - containerPort: 9103
