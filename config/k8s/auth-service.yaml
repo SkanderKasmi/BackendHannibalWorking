@@ -3,6 +3,8 @@ kind: Service
 metadata:
   name: auth-service
   namespace: devsecops
+  labels:
+    app: auth-service
 spec:
   selector:
     app: auth-service
@@ -19,6 +21,8 @@ kind: Deployment
 metadata:
   name: auth-service
   namespace: devsecops
+  labels:
+    app: auth-service
 spec:
   replicas: 1
   selector:
@@ -31,7 +35,8 @@ spec:
     spec:
       containers:
         - name: auth-service
-          image: pikafoc/skanderdevsopp-auth-service
+          image: pikafoc/hannibal:auth-service
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3001
             - containerPort: 9101
@@ -47,3 +52,22 @@ spec:
                 name: devsecops-config
             - secretRef:
                 name: service-secrets
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3001
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3001
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"

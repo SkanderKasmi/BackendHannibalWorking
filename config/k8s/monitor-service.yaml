@@ -3,6 +3,8 @@ kind: Service
 metadata:
   name: monitor-service
   namespace: devsecops
+  labels:
+    app: monitor-service
 spec:
   selector:
     app: monitor-service
@@ -19,6 +21,8 @@ kind: Deployment
 metadata:
   name: monitor-service
   namespace: devsecops
+  labels:
+    app: monitor-service
 spec:
   replicas: 1
   selector:
@@ -31,7 +35,8 @@ spec:
     spec:
       containers:
         - name: monitor-service
-          image: pikafoc/skanderdevsopp-monitor-service
+          image: pikafoc/hannibal:monitor-service
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3004
             - containerPort: 9104
@@ -47,3 +52,22 @@ spec:
                 name: devsecops-config
             - secretRef:
                 name: service-secrets
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3004
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3004
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"

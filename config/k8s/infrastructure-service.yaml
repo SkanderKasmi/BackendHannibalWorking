@@ -3,6 +3,8 @@ kind: Service
 metadata:
   name: infrastructure-service
   namespace: devsecops
+  labels:
+    app: infrastructure-service
 spec:
   selector:
     app: infrastructure-service
@@ -19,6 +21,8 @@ kind: Deployment
 metadata:
   name: infrastructure-service
   namespace: devsecops
+  labels:
+    app: infrastructure-service
 spec:
   replicas: 1
   selector:
@@ -31,7 +35,8 @@ spec:
     spec:
       containers:
         - name: infrastructure-service
-          image: pikafoc/skanderdevsopp-infrastructure-service
+          image: pikafoc/hannibal:infrastructure-service
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3002
             - containerPort: 9102
@@ -47,3 +52,22 @@ spec:
                 name: devsecops-config
             - secretRef:
                 name: service-secrets
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3002
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3002
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
