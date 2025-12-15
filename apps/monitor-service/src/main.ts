@@ -4,8 +4,10 @@ import { MonitorModule } from './monitor.module';
 import { MONITOR_SERVICE_PORT } from '@app/common/constants';
 import { RabbitMQService } from '@libs/common/messaging/rabbitmq.service';
 import { KafkaService } from '@libs/common/messaging/kafka.service';
+import { initOtelFromEnv } from '@libs/common/telemetry/otel.sdk';
 
 async function bootstrap() {
+  await initOtelFromEnv();
   const app = await NestFactory.createMicroservice<MicroserviceOptions>(
     MonitorModule,
     {

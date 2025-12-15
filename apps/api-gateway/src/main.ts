@@ -4,8 +4,10 @@ import { AppModule } from './app.module';
 import { API_GATEWAY_PORT } from '@app/common/constants';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import * as fs from 'fs';
+import { initOtelFromEnv } from '@libs/common/telemetry/otel.sdk';
 
 async function bootstrap() {
+  await initOtelFromEnv();
   const app = await NestFactory.create(AppModule);
   
   app.enableCors({

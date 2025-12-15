@@ -71,8 +71,10 @@ services:
     ports:
       - "3001:3001"
     environment:
-      NODE_ENV: production
+      NODE_ENV: docker
       DATABASE_URL: ${DATABASE_URL}
+      RABBITMQ_URL: ${RABBITMQ_URL:-amqp://user:password@rabbitmq:5672}
+      KAFKA_BROKERS: ${KAFKA_BROKERS:-kafka:29092}
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRATION: ${JWT_EXPIRATION}
     depends_on:
@@ -98,8 +100,10 @@ services:
     ports:
       - "3002:3002"
     environment:
-      NODE_ENV: production
+      NODE_ENV: docker
       DATABASE_URL: ${DATABASE_URL}
+      RABBITMQ_URL: ${RABBITMQ_URL:-amqp://user:password@rabbitmq:5672}
+      KAFKA_BROKERS: ${KAFKA_BROKERS:-kafka:29092}
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRATION: ${JWT_EXPIRATION}
     depends_on:
@@ -125,8 +129,10 @@ services:
     ports:
       - "3003:3003"
     environment:
-      NODE_ENV: production
+      NODE_ENV: docker
       DATABASE_URL: ${DATABASE_URL}
+      RABBITMQ_URL: ${RABBITMQ_URL:-amqp://user:password@rabbitmq:5672}
+      KAFKA_BROKERS: ${KAFKA_BROKERS:-kafka:29092}
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRATION: ${JWT_EXPIRATION}
     depends_on:
@@ -152,8 +158,10 @@ services:
     ports:
       - "3004:3004"
     environment:
-      NODE_ENV: production
+      NODE_ENV: docker
       DATABASE_URL: ${DATABASE_URL}
+      RABBITMQ_URL: ${RABBITMQ_URL:-amqp://user:password@rabbitmq:5672}
+      KAFKA_BROKERS: ${KAFKA_BROKERS:-kafka:29092}
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRATION: ${JWT_EXPIRATION}
     depends_on:

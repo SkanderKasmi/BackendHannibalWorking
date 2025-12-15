@@ -3,8 +3,10 @@ import { Transport, MicroserviceOptions } from '@nestjs/microservices';
 import { AuthModule } from './auth.module';
 import { AUTH_SERVICE_PORT } from '@app/common/constants';
 import { RabbitMQService } from '@libs/common/messaging/rabbitmq.service';
+import { initOtelFromEnv } from '@libs/common/telemetry/otel.sdk';
 
 async function bootstrap() {
+  await initOtelFromEnv();
   const app = await NestFactory.createMicroservice<MicroserviceOptions>(
     AuthModule,
     {

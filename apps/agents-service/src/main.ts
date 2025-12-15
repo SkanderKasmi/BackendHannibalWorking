@@ -6,8 +6,10 @@ import { RabbitMQService, RABBITMQ_CONFIG } from '@libs/common/messaging/rabbitm
 import { KafkaService } from '@libs/common/messaging/kafka.service';
 import { AgentsService } from './agents.service';
 import { RABBITMQ_ROUTING_KEYS } from '@app/common/constants';
+import { initOtelFromEnv } from '@libs/common/telemetry/otel.sdk';
 
 async function bootstrap() {
+  await initOtelFromEnv();
   const app = await NestFactory.createMicroservice<MicroserviceOptions>(
     AgentsModule,
     {

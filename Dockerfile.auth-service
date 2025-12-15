@@ -28,6 +28,4 @@ RUN npm run build:auth-service
 EXPOSE 3001
 
 # Run Prisma migrations and generate client on container start, then start app
-CMD npx prisma migrate deploy && \
-    npx prisma generate && \
-    npm run start:dev:auth-service
+CMD ["npm", "run", "start:prod:auth-service"]

@@ -29,8 +29,12 @@ services:
     ports:
       - "5000:5000"
     environment:
-      NODE_ENV: development
+      NODE_ENV: docker
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/microservices
+      RABBITMQ_URL: amqp://user:password@rabbitmq:5672
+      KAFKA_BROKERS: kafka:29092
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://localhost:4317
+      OTEL_SERVICE_NAME: api-gateway
       JWT_SECRET: your-super-secret-jwt-key-change-in-production
       JWT_EXPIRATION: 7d
     volumes:
@@ -52,8 +56,12 @@ services:
     ports:
       - "3001:3001"
     environment:
-      NODE_ENV: development
+      NODE_ENV: docker
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/microservices
+      RABBITMQ_URL: amqp://user:password@rabbitmq:5672
+      KAFKA_BROKERS: kafka:29092
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://localhost:4317
+      OTEL_SERVICE_NAME: auth-service
       JWT_SECRET: your-super-secret-jwt-key-change-in-production
       JWT_EXPIRATION: 7d
     volumes:
@@ -75,8 +83,12 @@ services:
     ports:
       - "3002:3002"
     environment:
-      NODE_ENV: development
+      NODE_ENV: docker
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/microservices
+      RABBITMQ_URL: amqp://user:password@rabbitmq:5672
+      KAFKA_BROKERS: kafka:29092
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://localhost:4317
+      OTEL_SERVICE_NAME: infrastructure-service
       JWT_SECRET: your-super-secret-jwt-key-change-in-production
       JWT_EXPIRATION: 7d
     volumes:
@@ -98,8 +110,12 @@ services:
     ports:
       - "3003:3003"
     environment:
-      NODE_ENV: development
+      NODE_ENV: docker
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/microservices
+      RABBITMQ_URL: amqp://user:password@rabbitmq:5672
+      KAFKA_BROKERS: kafka:29092
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://localhost:4317
+      OTEL_SERVICE_NAME: agents-service
       JWT_SECRET: your-super-secret-jwt-key-change-in-production
       JWT_EXPIRATION: 7d
     volumes:
@@ -121,8 +137,12 @@ services:
     ports:
       - "3004:3004"
     environment:
-      NODE_ENV: development
+      NODE_ENV: docker
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/microservices
+      RABBITMQ_URL: amqp://user:password@rabbitmq:5672
+      KAFKA_BROKERS: kafka:29092
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://localhost:4317
+      OTEL_SERVICE_NAME: monitor-service
       JWT_SECRET: your-super-secret-jwt-key-change-in-production
       JWT_EXPIRATION: 7d
     volumes:
